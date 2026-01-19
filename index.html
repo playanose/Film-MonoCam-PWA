@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Analog Cam</title>
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22AnalogCam%22,%22short_name%22:%22AnalogCam%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#000000%22,%22theme_color%22:%22#000000%22}">
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: 'Courier New', Courier, monospace; }
+        #app { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+        
+        video { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.2s; }
+        
+        /* The Real-Time Moving Grain */
+        #grain-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; opacity: 0.2;
+            filter: url(#noiseFilter);
+        }
+
+        /* Mono Styles */
+        .f-standard { filter: grayscale(100%); }
+        .f-high-iso { filter: grayscale(100%) contrast(180%) brightness(110%); }
+        .f-expired { filter: grayscale(100%) sepia(25%) contrast(90%); }
+        .f-noir { filter: grayscale(100%) contrast(300%) brightness(40%); }
+
+        /* UI Styling */
+        .ui { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding-bottom: 50px; }
+        .scroller { display: flex; gap: 10px; overflow-x: auto; padding: 15px; scrollbar-width: none; justify-content: center; }
+        .btn { 
+            background: transparent; border: 1px solid #555; color: #aaa; 
+            border-radius: 4px; padding: 6px 12px; font-size: 10px; cursor: pointer;
+        }
+        .btn.active { border-color: #ff6600; color: #ff6600; }
+
+        .shutter-btn { 
+            width: 70px; height: 70px; border-radius: 50%; border: 4px solid white;
+            background: rgba(255,255,255,0.1); margin: 0 auto; display: block;
+        }
+        .shutter-btn:active { background: white; transform: scale(0.95); }
+        
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <svg style="position: absolute; width: 0; height: 0;">
+        <filter id="noiseFilter">
+            <feTurbulence id="turbulence" type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" />
+            <feColorMatrix type="saturate" values="0" />
+        </filter>
+    </svg>
+
+    <video id="v" autoplay playsinline class="f-standard"></video>
+    <div id="grain-overlay"></div>
+
+    <div class="ui">
+        <div class="scroller">
+            <button class="btn active" onclick="setF(this, 'f-standard')">ILFORD 400</button>
+            <button class="btn" onclick="setF(this, 'f-high-iso')">TRI-X 1600</button>
+            <button class="btn" onclick="setF(this, 'f-expired')">EXPIRED</button>
+            <button class="btn" onclick="setF(this, 'f-noir')">NOIR</button>
+        </div>
+        <button class="shutter-btn" onclick="snap()"></button>
+    </div>
+</div>
+
+<canvas id="c"></canvas>
+
+<script>
+    const v = document.getElementById('v');
+    const c = document.getElementById('c');
+    const turb = document.getElementById('turbulence');
+    
+    // Animate the grain seed for the "Film Look"
+    function loop() {
+        turb.setAttribute('seed', Math.random() * 500);
+        requestAnimationFrame(loop);
+    }
+    loop();
+
+    async function init() {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: { ideal: 3840 } } 
+        });
+        v.srcObject = stream;
+    }
+
+    function setF(btn, cls) {
+        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        v.className = cls;
+    }
+
+    function snap() {
+        const ctx = c.getContext('2d');
+        c.width = v.videoWidth;
+        c.height = v.videoHeight;
+
+        // 1. Draw Camera Frame with Filter
+        ctx.filter = window.getComputedStyle(v).filter;
+        ctx.drawImage(v, 0, 0);
+
+        // 2. Add Unique Random Grain
+        const gC = document.createElement('canvas');
+        gC.width = c.width; gC.height = c.height;
+        const gCtx = gC.getContext('2d');
+        turb.setAttribute('seed', Math.random() * 999);
+        gCtx.filter = 'url(#noiseFilter)';
+        gCtx.fillStyle = 'white';
+        gCtx.fillRect(0, 0, c.width, c.height);
+        
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = 0.25; 
+        ctx.drawImage(gC, 0, 0);
+
+        // 3. Add Film Date Stamp (Orange Quartz Style)
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 0.8;
+        const now = new Date();
+        const dateStr = `${now.getFullYear()} ${String(now.getMonth() + 1).padStart(2, '0')} ${String(now.getDate()).padStart(2, '0')}`;
+        const fontSize = Math.floor(c.width / 25);
+        ctx.font = `${fontSize}px "Courier New"`;
+        ctx.fillStyle = "#ff6600";
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "#ff6600";
+        ctx.fillText(dateStr, c.width - (fontSize * 8), c.height - (fontSize));
+
+        // 4. Save 95% Quality JPG
+        const link = document.createElement('a');
+        link.download = `FILM_${Date.now()}.jpg`;
+        link.href = c.toDataURL('image/jpeg', 0.95);
+        link.click();
+    }
+
+    init();
+</script>
+</body>
+</html>
