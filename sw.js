@@ -1,8 +1,8 @@
-const CACHE_NAME = 'monocam-v4';
+const CACHE_NAME = 'monocam-v5-clean';
 const ASSETS = [
-  './', 
-  './index.html', 
-  './manifest.json', 
+  './',
+  './index.html',
+  './manifest.json',
   './sw.js',
   './icon.png'
 ];
