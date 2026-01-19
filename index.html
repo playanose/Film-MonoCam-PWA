@@ -3,61 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Raw Mono PWA</title>
+    <title>Raw Mono Pro</title>
     <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22RawMono%22,%22short_name%22:%22RawMono%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#000000%22,%22theme_color%22:%22#000000%22}">
     <style>
-        body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: sans-serif; }
+        body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: sans-serif; touch-action: none; }
         #app { position: relative; width: 100vw; height: 100vh; }
         
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Shutter Blink Effect */
-        #shutter-flash {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: black; opacity: 0; pointer-events: none; z-index: 10;
-        }
+        /* Shutter & Focus UI */
+        #shutter-flash { position: absolute; inset: 0; background: black; opacity: 0; pointer-events: none; z-index: 50; }
         .blink { animation: blinkAnim 0.35s ease-in-out; }
-        @keyframes blinkAnim {
-            0% { opacity: 0; }
-            30% { opacity: 1; }
-            100% { opacity: 0; }
+        @keyframes blinkAnim { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
+
+        #focus-square {
+            position: absolute; width: 60px; height: 60px; border: 1px solid #ff6600;
+            display: none; pointer-events: none; z-index: 40; transform: translate(-50%, -50%);
         }
 
-        /* Live Grain Overlay */
-        #grain-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; opacity: 0.22; filter: url(#noiseFilter);
+        /* Exposure Slider */
+        .exposure-container {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 60;
         }
+        #ev-slider {
+            appearance: none; width: 150px; height: 4px; background: rgba(255,255,255,0.3);
+            transform: rotate(-90deg); border-radius: 2px;
+        }
+        #ev-slider::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; background: #fff; border-radius: 50%; }
 
-        /* Professional Mono Filters */
+        #grain-overlay { position: absolute; inset: 0; pointer-events: none; opacity: 0.22; filter: url(#noiseFilter); z-index: 5; }
+
+        /* Styles */
         .f-standard { filter: grayscale(100%); }
         .f-high-iso { filter: grayscale(100%) contrast(180%) brightness(110%); }
         .f-silvery { filter: grayscale(100%) brightness(1.1) contrast(1.1); }
         .f-noir { filter: grayscale(100%) contrast(300%) brightness(40%); }
 
-        .ui { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding-bottom: 60px; }
+        .ui { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding-bottom: 60px; z-index: 100; }
         .scroller { display: flex; gap: 15px; overflow-x: auto; padding: 15px; scrollbar-width: none; justify-content: center; }
-        .btn { 
-            background: rgba(255,255,255,0.1); border: 1px solid #444; color: #fff; 
-            border-radius: 20px; padding: 8px 16px; font-size: 11px; letter-spacing: 1px;
-        }
+        .btn { background: rgba(255,255,255,0.1); border: 1px solid #444; color: #fff; border-radius: 20px; padding: 8px 16px; font-size: 11px; }
         .btn.active { border-color: #fff; background: #fff; color: #000; }
-
-        .shutter-btn { 
-            width: 80px; height: 80px; border-radius: 50%; border: 4px solid white;
-            background: transparent; margin: 0 auto; display: block;
-            transition: transform 0.1s;
-        }
-        .shutter-btn:active { transform: scale(0.9); }
+        .shutter-btn { width: 75px; height: 75px; border-radius: 50%; border: 4px solid white; background: transparent; margin: 0 auto; display: block; }
         
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="app">
+<div id="app" onclick="requestFocus(event)">
     <div id="shutter-flash"></div>
+    <div id="focus-square"></div>
     
+    <div class="exposure-container" onclick="event.stopPropagation()">
+        <span style="color:white; font-size:10px;">EV</span>
+        <input type="range" id="ev-slider" min="-3" max="3" step="0.5" value="0" oninput="adjustExposure(this.value)">
+    </div>
+
     <svg style="position: absolute; width: 0; height: 0;">
         <filter id="noiseFilter">
             <feTurbulence id="turbulence" type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
@@ -68,10 +70,10 @@
     <video id="v" autoplay playsinline class="f-standard"></video>
     <div id="grain-overlay"></div>
 
-    <div class="ui">
+    <div class="ui" onclick="event.stopPropagation()">
         <div class="scroller">
-            <button class="btn active" onclick="setF(this, 'f-standard')">TRI-X 400</button>
-            <button class="btn" onclick="setF(this, 'f-high-iso')">NEOPAN 1600</button>
+            <button class="btn active" onclick="setF(this, 'f-standard')">TRI-X</button>
+            <button class="btn" onclick="setF(this, 'f-high-iso')">NEOPAN</button>
             <button class="btn" onclick="setF(this, 'f-silvery')">SILVER</button>
             <button class="btn" onclick="setF(this, 'f-noir')">NOIR</button>
         </div>
@@ -86,29 +88,44 @@
     const c = document.getElementById('c');
     const turb = document.getElementById('turbulence');
     const flash = document.getElementById('shutter-flash');
-    
-    // Continuous random grain for the "Live Film" look
+    const focusSq = document.getElementById('focus-square');
+    let videoTrack = null;
+
     function loop() {
         turb.setAttribute('seed', Math.random() * 1000);
         requestAnimationFrame(loop);
     }
     loop();
 
-    // Start Camera at Maximum Native Resolution
     async function init() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: "environment",
-                    width: { ideal: 7680 }, // Requests highest possible (up to 8K)
-                    height: { ideal: 4320 } 
-                }, 
-                audio: false 
+                video: { facingMode: "environment", width: { ideal: 7680 }, height: { ideal: 4320 } } 
             });
             v.srcObject = stream;
-        } catch(e) { 
-            alert("Please use HTTPS and allow camera permissions."); 
-        }
+            videoTrack = stream.getVideoTracks()[0];
+        } catch(e) { alert("Camera access required."); }
+    }
+
+    async function adjustExposure(val) {
+        if (!videoTrack) return;
+        try {
+            await videoTrack.applyConstraints({ advanced: [{ exposureCompensation: val }] });
+        } catch(e) { console.error("Exposure control not supported."); }
+    }
+
+    async function requestFocus(e) {
+        if (!videoTrack) return;
+        focusSq.style.left = `${e.clientX}px`;
+        focusSq.style.top = `${e.clientY}px`;
+        focusSq.style.display = 'block';
+        setTimeout(() => focusSq.style.display = 'none', 1000);
+
+        try {
+            await videoTrack.applyConstraints({
+                advanced: [{ focusMode: "continuous", pointsOfInterest: [{x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight}] }]
+            });
+        } catch(err) { }
     }
 
     function setF(btn, cls) {
@@ -118,32 +135,17 @@
     }
 
     function captureRaw() {
-        // Trigger mechanical shutter blink
-        flash.classList.remove('blink');
-        void flash.offsetWidth; 
         flash.classList.add('blink');
-
-        // Small delay for mechanical feel before processing
         setTimeout(() => {
+            c.width = v.videoWidth; c.height = v.videoHeight;
             const ctx = c.getContext('2d');
-            
-            // Set canvas to ORIGINAL SENSOR SIZE
-            c.width = v.videoWidth;
-            c.height = v.videoHeight;
-
-            // 1. Apply Filter and Draw Base Image
             ctx.filter = window.getComputedStyle(v).filter;
-            ctx.drawImage(v, 0, 0, c.width, c.height);
+            ctx.drawImage(v, 0, 0);
 
-            // 2. Generate and Overlay Random Grain
             const gC = document.createElement('canvas');
-            gC.width = c.width; 
-            gC.height = c.height;
+            gC.width = c.width; gC.height = c.height;
             const gCtx = gC.getContext('2d');
-            
-            // Create a unique grain seed for this photo
             turb.setAttribute('seed', Math.random() * 2000);
-            
             gCtx.filter = 'url(#noiseFilter)';
             gCtx.fillStyle = 'white';
             gCtx.fillRect(0, 0, c.width, c.height);
@@ -152,12 +154,11 @@
             ctx.globalAlpha = 0.25; 
             ctx.drawImage(gC, 0, 0);
 
-            // 3. Export at 95% Quality JPG
-            const imgData = c.toDataURL('image/jpeg', 0.95);
             const link = document.createElement('a');
-            link.download = `RAW_MONO_${Date.now()}.jpg`;
-            link.href = imgData;
+            link.download = `RAW_${Date.now()}.jpg`;
+            link.href = c.toDataURL('image/jpeg', 0.95);
             link.click();
+            flash.classList.remove('blink');
         }, 200); 
     }
 
