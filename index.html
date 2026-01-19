@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MonoCam Pro</title>
-    
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
-
     <style>
+        :root { --accent: #ff6600; }
         body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: sans-serif; color: white; -webkit-user-select: none; }
         #app { position: relative; width: 100vw; height: 100vh; }
         video { width: 100%; height: 100%; object-fit: cover; }
+        .f-leica { filter: grayscale(100%) contrast(160%) brightness(105%); }
+        .f-fuji { filter: grayscale(100%) contrast(120%) brightness(100%) sepia(5%); }
+        .f-ricoh { filter: grayscale(100%) contrast(220%) brightness(90%); }
+        .f-pentax { filter: grayscale(100%) contrast(110%) brightness(110%); }
         #grid { position: absolute; inset: 0; pointer-events: none; z-index: 10; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; opacity: 0.3; }
         #grid div { border: 0.2px solid rgba(255,255,255,0.4); }
         #grid.hidden { opacity: 0; }
@@ -20,16 +23,12 @@
         .blink { animation: blinkAnim 0.3s ease-out; }
         @keyframes blinkAnim { 0% { opacity: 0; } 40% { opacity: 1; } 100% { opacity: 0; } }
         #focus-square { position: absolute; width: 60px; height: 60px; border: 1px solid white; display: none; pointer-events: none; z-index: 40; transform: translate(-50%, -50%); opacity: 0.5; }
-        .f-standard { filter: grayscale(100%); }
-        .f-punch { filter: grayscale(100%) contrast(170%) brightness(95%); }
-        .f-flat { filter: grayscale(100%) contrast(90%) brightness(105%); }
-        .f-noir { filter: grayscale(100%) contrast(250%) brightness(55%); }
         .top-nav { position: absolute; top: 45px; width: 100%; display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box; z-index: 70; }
         .btn-ui { background: none; border: none; color: white; font-size: 14px; letter-spacing: 1px; opacity: 0.8; }
         .bottom-nav { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.85) 60%); padding-bottom: 60px; z-index: 70; text-align: center;}
         .scroller { display: flex; gap: 20px; overflow-x: auto; padding: 15px; scrollbar-width: none; justify-content: center; margin-bottom: 15px; }
-        .f-opt { background: none; border: none; color: #666; font-size: 10px; letter-spacing: 2px; transition: 0.2s; padding: 5px 10px; }
-        .f-opt.active { color: white; font-weight: bold; }
+        .f-opt { background: none; border: none; color: #666; font-size: 10px; letter-spacing: 2px; transition: 0.2s; padding: 5px 10px; font-weight: bold;}
+        .f-opt.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
         .shutter-btn { width: 76px; height: 76px; border-radius: 50%; border: 3px solid white; display: inline-flex; justify-content: center; align-items: center; background: none; }
         .shutter-core { width: 62px; height: 62px; border-radius: 50%; background: white; transition: transform 0.1s; }
         .shutter-core:active { transform: scale(0.85); }
@@ -37,7 +36,6 @@
     </style>
 </head>
 <body>
-
 <div id="app" onclick="triggerFocus(event)">
     <div id="shutter-flash"></div>
     <div id="focus-square"></div>
@@ -47,37 +45,24 @@
         <button class="btn-ui" onclick="location.reload()">RESET</button>
     </div>
     <div id="grid" class="hidden"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
-    
-    <svg style="position: absolute; width: 0; height: 0;">
-        <filter id="noiseFilter">
-            <feTurbulence id="turbulence" type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
-            <feColorMatrix type="saturate" values="0" />
-        </filter>
+    <svg style="position: absolute; width: 0; height: 0;"><filter id="noiseFilter">
+        <feTurbulence id="turbulence" type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
+        <feColorMatrix type="saturate" values="0" /></filter>
     </svg>
-
-    <video id="v" autoplay playsinline class="f-standard"></video>
-
+    <video id="v" autoplay playsinline class="f-leica"></video>
     <div class="bottom-nav" onclick="event.stopPropagation()">
         <div class="scroller">
-            <button class="f-opt active" onclick="setMode(this, 'f-standard')">TRI-X</button>
-            <button class="f-opt" onclick="setMode(this, 'f-punch')">PUNCH</button>
-            <button class="f-opt" onclick="setMode(this, 'f-flat')">SOFT</button>
-            <button class="f-opt" onclick="setMode(this, 'f-noir')">NOIR</button>
+            <button class="f-opt active" onclick="setMode(this, 'f-leica')">L-mono</button>
+            <button class="f-opt" onclick="setMode(this, 'f-fuji')">F-mono</button>
+            <button class="f-opt" onclick="setMode(this, 'f-ricoh')">R-mono</button>
+            <button class="f-opt" onclick="setMode(this, 'f-pentax')">P-mono</button>
         </div>
-        <button class="shutter-btn" onclick="executeSnap()">
-            <div class="shutter-core"></div>
-        </button>
+        <button class="shutter-btn" onclick="executeSnap()"><div class="shutter-core"></div></button>
     </div>
 </div>
-
 <canvas id="c"></canvas>
-
 <script>
-    // Register Service Worker for Offline PWA support
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js');
-    }
-
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
     const v = document.getElementById('v');
     const c = document.getElementById('c');
     const turb = document.getElementById('turbulence');
@@ -93,58 +78,55 @@
             });
             v.srcObject = stream;
             track = stream.getVideoTracks()[0];
-        } catch(e) { console.error("Camera error."); }
+        } catch(e) { alert("Camera Error: Ensure HTTPS"); }
     }
 
     function toggleGrid() { grid.classList.toggle('hidden'); }
-
-    async function triggerFocus(e) {
-        if (!track) return;
-        focusSq.style.left = `${e.clientX}px`;
-        focusSq.style.top = `${e.clientY}px`;
-        focusSq.style.display = 'block';
-        setTimeout(() => focusSq.style.display = 'none', 500);
-        try {
-            await track.applyConstraints({
-                advanced: [{ pointsOfInterest: [{x: e.clientX/window.innerWidth, y: e.clientY/window.innerHeight}] }]
-            });
-        } catch(err) {}
-    }
-
     function setMode(btn, cls) {
         document.querySelectorAll('.f-opt').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         v.className = cls;
     }
 
+    async function triggerFocus(e) {
+        if (!track) return;
+        focusSq.style.left = `${e.clientX}px`; focusSq.style.top = `${e.clientY}px`;
+        focusSq.style.display = 'block'; setTimeout(() => focusSq.style.display = 'none', 500);
+        try { await track.applyConstraints({ advanced: [{ pointsOfInterest: [{x: e.clientX/window.innerWidth, y: e.clientY/window.innerHeight}] }] }); } catch(err) {}
+    }
+
     function executeSnap() {
         flash.classList.add('blink');
+        const activeLabel = document.querySelector('.f-opt.active').innerText;
         setTimeout(() => {
-            c.width = v.videoWidth; 
-            c.height = v.videoHeight;
+            c.width = v.videoWidth; c.height = v.videoHeight;
             const ctx = c.getContext('2d');
             ctx.filter = window.getComputedStyle(v).filter;
             ctx.drawImage(v, 0, 0);
 
-            const gC = document.createElement('canvas');
-            gC.width = c.width; gC.height = c.height;
+            let grainOp = 0.22; let grainFreq = 0.85; 
+            if (activeLabel === "L-mono") { grainOp = 0.18; grainFreq = 0.95; }
+            else if (activeLabel === "F-mono") { grainOp = 0.24; grainFreq = 0.70; }
+            else if (activeLabel === "R-mono") { grainOp = 0.35; grainFreq = 0.50; }
+            else if (activeLabel === "P-mono") { grainOp = 0.20; grainFreq = 0.80; }
+
+            const gC = document.createElement('canvas'); gC.width = c.width; gC.height = c.height;
             const gCtx = gC.getContext('2d');
+            turb.setAttribute('baseFrequency', grainFreq);
             turb.setAttribute('seed', Math.random() * 5000);
             gCtx.filter = 'url(#noiseFilter)';
             gCtx.fillStyle = 'white'; gCtx.fillRect(0, 0, c.width, c.height);
             
-            ctx.globalCompositeOperation = 'overlay';
-            ctx.globalAlpha = 0.22; 
+            ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = grainOp;
             ctx.drawImage(gC, 0, 0);
 
             const link = document.createElement('a');
-            link.download = `MONO_${Date.now()}.jpg`;
+            link.download = `${activeLabel}_${Date.now()}.jpg`;
             link.href = c.toDataURL('image/jpeg', 0.95);
             link.click();
             setTimeout(() => flash.classList.remove('blink'), 300);
         }, 150); 
     }
-
     init();
 </script>
 </body>
