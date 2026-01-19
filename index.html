@@ -2,62 +2,78 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Raw Mono Pro</title>
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22RawMono%22,%22short_name%22:%22RawMono%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#000000%22,%22theme_color%22:%22#000000%22}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>MonoCam Pro</title>
+    
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22MonoCam%20Pro%22,%22short_name%22:%22MonoCam%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#000000%22,%22theme_color%22:%22#000000%22,%22icons%22:[{%22src%22:%22data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIABAMAAACO9VqFAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAAAJUExURQAAAP///////6V97Y8AAAACdFJOUwBA5thmAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAB3klEQVR4nO3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAMWvAABYmSPlAAAAABJRU5ErkJggg==%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22,%22purpose%22:%22any%22}]}">
+
     <style>
-        body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: sans-serif; touch-action: none; }
+        body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: sans-serif; color: white; -webkit-user-select: none; }
         #app { position: relative; width: 100vw; height: 100vh; }
-        
         video { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* Shutter & Focus UI */
-        #shutter-flash { position: absolute; inset: 0; background: black; opacity: 0; pointer-events: none; z-index: 50; }
-        .blink { animation: blinkAnim 0.35s ease-in-out; }
-        @keyframes blinkAnim { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
 
+        /* Composition Grid */
+        #grid {
+            position: absolute; inset: 0; pointer-events: none; z-index: 10;
+            display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr;
+            opacity: 0.3; transition: opacity 0.2s;
+        }
+        #grid div { border: 0.2px solid rgba(255,255,255,0.4); }
+        #grid.hidden { opacity: 0; }
+
+        /* Shutter Feedback */
+        #shutter-flash { position: absolute; inset: 0; background: black; opacity: 0; pointer-events: none; z-index: 100; }
+        .blink { animation: blinkAnim 0.3s ease-out; }
+        @keyframes blinkAnim { 0% { opacity: 0; } 40% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* Focus Ring */
         #focus-square {
-            position: absolute; width: 60px; height: 60px; border: 1px solid #ff6600;
+            position: absolute; width: 60px; height: 60px; border: 1px solid white;
             display: none; pointer-events: none; z-index: 40; transform: translate(-50%, -50%);
+            opacity: 0.5;
         }
 
-        /* Exposure Slider */
-        .exposure-container {
-            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
-            display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 60;
-        }
-        #ev-slider {
-            appearance: none; width: 150px; height: 4px; background: rgba(255,255,255,0.3);
-            transform: rotate(-90deg); border-radius: 2px;
-        }
-        #ev-slider::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; background: #fff; border-radius: 50%; }
-
-        #grain-overlay { position: absolute; inset: 0; pointer-events: none; opacity: 0.22; filter: url(#noiseFilter); z-index: 5; }
-
-        /* Styles */
+        /* Mono Filters */
         .f-standard { filter: grayscale(100%); }
-        .f-high-iso { filter: grayscale(100%) contrast(180%) brightness(110%); }
-        .f-silvery { filter: grayscale(100%) brightness(1.1) contrast(1.1); }
-        .f-noir { filter: grayscale(100%) contrast(300%) brightness(40%); }
+        .f-punch { filter: grayscale(100%) contrast(170%) brightness(95%); }
+        .f-flat { filter: grayscale(100%) contrast(90%) brightness(105%); }
+        .f-noir { filter: grayscale(100%) contrast(250%) brightness(55%); }
 
-        .ui { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding-bottom: 60px; z-index: 100; }
-        .scroller { display: flex; gap: 15px; overflow-x: auto; padding: 15px; scrollbar-width: none; justify-content: center; }
-        .btn { background: rgba(255,255,255,0.1); border: 1px solid #444; color: #fff; border-radius: 20px; padding: 8px 16px; font-size: 11px; }
-        .btn.active { border-color: #fff; background: #fff; color: #000; }
-        .shutter-btn { width: 75px; height: 75px; border-radius: 50%; border: 4px solid white; background: transparent; margin: 0 auto; display: block; }
-        
+        /* UI */
+        .top-nav { position: absolute; top: 45px; width: 100%; display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box; z-index: 70; }
+        .btn-ui { background: none; border: none; color: white; font-size: 14px; letter-spacing: 1px; opacity: 0.8; }
+
+        .bottom-nav { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.85) 60%); padding-bottom: 60px; z-index: 70; text-align: center;}
+        .scroller { display: flex; gap: 20px; overflow-x: auto; padding: 15px; scrollbar-width: none; justify-content: center; margin-bottom: 15px; }
+        .f-opt { background: none; border: none; color: #666; font-size: 10px; letter-spacing: 2px; transition: 0.2s; padding: 5px 10px; }
+        .f-opt.active { color: white; font-weight: bold; }
+
+        .shutter-btn { 
+            width: 76px; height: 76px; border-radius: 50%; border: 3px solid white; 
+            display: inline-flex; justify-content: center; align-items: center; background: none; padding: 0;
+        }
+        .shutter-core { width: 62px; height: 62px; border-radius: 50%; background: white; transition: transform 0.1s; }
+        .shutter-core:active { transform: scale(0.85); }
+
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="app" onclick="requestFocus(event)">
+<div id="app" onclick="triggerFocus(event)">
     <div id="shutter-flash"></div>
     <div id="focus-square"></div>
     
-    <div class="exposure-container" onclick="event.stopPropagation()">
-        <span style="color:white; font-size:10px;">EV</span>
-        <input type="range" id="ev-slider" min="-3" max="3" step="0.5" value="0" oninput="adjustExposure(this.value)">
+    <div class="top-nav">
+        <button class="btn-ui" onclick="toggleGrid()">GRID</button>
+        <span style="font-size: 9px; letter-spacing: 5px; opacity: 0.5;">MONOCHROME</span>
+        <button class="btn-ui" onclick="location.reload()">RESET</button>
+    </div>
+
+    <div id="grid" class="hidden">
+        <div></div><div></div><div></div>
+        <div></div><div></div><div></div>
+        <div></div><div></div><div></div>
     </div>
 
     <svg style="position: absolute; width: 0; height: 0;">
@@ -68,16 +84,17 @@
     </svg>
 
     <video id="v" autoplay playsinline class="f-standard"></video>
-    <div id="grain-overlay"></div>
 
-    <div class="ui" onclick="event.stopPropagation()">
+    <div class="bottom-nav" onclick="event.stopPropagation()">
         <div class="scroller">
-            <button class="btn active" onclick="setF(this, 'f-standard')">TRI-X</button>
-            <button class="btn" onclick="setF(this, 'f-high-iso')">NEOPAN</button>
-            <button class="btn" onclick="setF(this, 'f-silvery')">SILVER</button>
-            <button class="btn" onclick="setF(this, 'f-noir')">NOIR</button>
+            <button class="f-opt active" onclick="setMode(this, 'f-standard')">TRI-X</button>
+            <button class="f-opt" onclick="setMode(this, 'f-punch')">PUNCH</button>
+            <button class="f-opt" onclick="setMode(this, 'f-flat')">SOFT</button>
+            <button class="f-opt" onclick="setMode(this, 'f-noir')">NOIR</button>
         </div>
-        <button class="shutter-btn" onclick="captureRaw()"></button>
+        <button class="shutter-btn" onclick="executeSnap()">
+            <div class="shutter-core"></div>
+        </button>
     </div>
 </div>
 
@@ -89,13 +106,8 @@
     const turb = document.getElementById('turbulence');
     const flash = document.getElementById('shutter-flash');
     const focusSq = document.getElementById('focus-square');
-    let videoTrack = null;
-
-    function loop() {
-        turb.setAttribute('seed', Math.random() * 1000);
-        requestAnimationFrame(loop);
-    }
-    loop();
+    const grid = document.getElementById('grid');
+    let track = null;
 
     async function init() {
         try {
@@ -103,41 +115,36 @@
                 video: { facingMode: "environment", width: { ideal: 7680 }, height: { ideal: 4320 } } 
             });
             v.srcObject = stream;
-            videoTrack = stream.getVideoTracks()[0];
-        } catch(e) { alert("Camera access required."); }
+            track = stream.getVideoTracks()[0];
+        } catch(e) { console.error("Camera error."); }
     }
 
-    async function adjustExposure(val) {
-        if (!videoTrack) return;
-        try {
-            await videoTrack.applyConstraints({ advanced: [{ exposureCompensation: val }] });
-        } catch(e) { console.error("Exposure control not supported."); }
-    }
+    function toggleGrid() { grid.classList.toggle('hidden'); }
 
-    async function requestFocus(e) {
-        if (!videoTrack) return;
+    async function triggerFocus(e) {
+        if (!track) return;
         focusSq.style.left = `${e.clientX}px`;
         focusSq.style.top = `${e.clientY}px`;
         focusSq.style.display = 'block';
-        setTimeout(() => focusSq.style.display = 'none', 1000);
-
+        setTimeout(() => focusSq.style.display = 'none', 500);
         try {
-            await videoTrack.applyConstraints({
-                advanced: [{ focusMode: "continuous", pointsOfInterest: [{x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight}] }]
+            await track.applyConstraints({
+                advanced: [{ pointsOfInterest: [{x: e.clientX/window.innerWidth, y: e.clientY/window.innerHeight}] }]
             });
-        } catch(err) { }
+        } catch(err) {}
     }
 
-    function setF(btn, cls) {
-        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    function setMode(btn, cls) {
+        document.querySelectorAll('.f-opt').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         v.className = cls;
     }
 
-    function captureRaw() {
+    function executeSnap() {
         flash.classList.add('blink');
         setTimeout(() => {
-            c.width = v.videoWidth; c.height = v.videoHeight;
+            c.width = v.videoWidth; 
+            c.height = v.videoHeight;
             const ctx = c.getContext('2d');
             ctx.filter = window.getComputedStyle(v).filter;
             ctx.drawImage(v, 0, 0);
@@ -145,21 +152,20 @@
             const gC = document.createElement('canvas');
             gC.width = c.width; gC.height = c.height;
             const gCtx = gC.getContext('2d');
-            turb.setAttribute('seed', Math.random() * 2000);
+            turb.setAttribute('seed', Math.random() * 5000);
             gCtx.filter = 'url(#noiseFilter)';
-            gCtx.fillStyle = 'white';
-            gCtx.fillRect(0, 0, c.width, c.height);
+            gCtx.fillStyle = 'white'; gCtx.fillRect(0, 0, c.width, c.height);
             
             ctx.globalCompositeOperation = 'overlay';
-            ctx.globalAlpha = 0.25; 
+            ctx.globalAlpha = 0.22; 
             ctx.drawImage(gC, 0, 0);
 
             const link = document.createElement('a');
-            link.download = `RAW_${Date.now()}.jpg`;
+            link.download = `MONO_${Date.now()}.jpg`;
             link.href = c.toDataURL('image/jpeg', 0.95);
             link.click();
-            flash.classList.remove('blink');
-        }, 200); 
+            setTimeout(() => flash.classList.remove('blink'), 300);
+        }, 150); 
     }
 
     init();
