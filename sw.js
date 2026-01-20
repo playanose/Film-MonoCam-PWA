@@ -1,11 +1,5 @@
-const CACHE_NAME = 'monocam-v5-clean';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './sw.js',
-  './icon.png'
-];
+const CACHE_NAME = 'monocam-v8-gallery';
+const ASSETS = ['./', './index.html', './manifest.json', './sw.js', './icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(ASSETS)));
