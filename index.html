@@ -11,24 +11,30 @@
         :root { --accent: #ff6600; }
         body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: sans-serif; color: white; -webkit-user-select: none; }
         
+        /* Flexbox Layout to prevent overlap */
         #app { 
-            position: relative; 
-            width: 100vw; 
-            height: 100vh; 
-            display: flex; 
-            align-items: center; 
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+        }
+
+        /* Viewfinder Section */
+        .viewfinder-container {
+            position: relative;
+            flex-grow: 1; /* Takes all available space */
+            display: flex;
+            align-items: center;
             justify-content: center;
+            overflow: hidden;
             background: #050505;
         }
 
-        /* NATIVE SENSOR VIEW: 
-           object-fit: contain ensures you see the EXACT frame the sensor sees, 
-           without any digital zooming or cropping to fit the phone screen. */
         video { 
             width: 100%; 
             height: 100%; 
-            object-fit: contain; 
-            background: #000;
+            object-fit: contain; /* Shows native sensor without crop */
         }
         
         /* Filters */
@@ -37,7 +43,7 @@
         .f-ricoh { filter: grayscale(100%) contrast(220%) brightness(90%); }
         .f-pentax { filter: grayscale(100%) contrast(110%) brightness(110%); }
 
-        /* UI Overlays */
+        /* Overlays stay inside the Viewfinder container */
         #grid { position: absolute; inset: 0; pointer-events: none; z-index: 10; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; opacity: 0.3; }
         #grid div { border: 0.2px solid rgba(255,255,255,0.4); }
         #grid.hidden { opacity: 0; }
@@ -46,34 +52,42 @@
         @keyframes blinkAnim { 0% { opacity: 0; } 40% { opacity: 1; } 100% { opacity: 0; } }
         #focus-square { position: absolute; width: 60px; height: 60px; border: 1px solid white; display: none; pointer-events: none; z-index: 40; transform: translate(-50%, -50%); opacity: 0.5; }
         
+        /* Nav Areas */
         .top-nav { position: absolute; top: 45px; width: 100%; display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box; z-index: 70; }
-        .btn-ui { background: none; border: none; color: white; font-size: 14px; letter-spacing: 1px; opacity: 0.8; }
         
-        .bottom-nav { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.9) 70%); padding-bottom: 60px; z-index: 70; text-align: center;}
-        .scroller { display: flex; gap: 20px; overflow-x: auto; padding: 15px; scrollbar-width: none; justify-content: center; margin-bottom: 15px; }
-        .f-opt { background: none; border: none; color: #666; font-size: 10px; letter-spacing: 2px; transition: 0.2s; padding: 5px 10px; font-weight: bold;}
-        .f-opt.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        /* Bottom Control Panel - Now physically below the video */
+        .bottom-nav { 
+            background: #000; 
+            padding: 20px 0 50px 0; 
+            z-index: 70; 
+            text-align: center;
+            border-top: 1px solid #111;
+        }
         
-        .shutter-btn { width: 76px; height: 76px; border-radius: 50%; border: 3px solid white; display: inline-flex; justify-content: center; align-items: center; background: none; cursor: pointer; }
-        .shutter-core { width: 62px; height: 62px; border-radius: 50%; background: white; transition: transform 0.1s; }
-        .shutter-core:active { transform: scale(0.85); }
+        .scroller { display: flex; gap: 20px; overflow-x: auto; padding: 10px; scrollbar-width: none; justify-content: center; margin-bottom: 15px; }
+        .f-opt { background: none; border: none; color: #444; font-size: 11px; letter-spacing: 2px; transition: 0.2s; padding: 5px 10px; font-weight: bold;}
+        .f-opt.active { color: var(--accent); }
+        
+        .shutter-btn { width: 72px; height: 72px; border-radius: 50%; border: 3px solid white; display: inline-flex; justify-content: center; align-items: center; background: none; }
+        .shutter-core { width: 58px; height: 58px; border-radius: 50%; background: white; transition: transform 0.1s; }
         canvas { display: none; }
     </style>
 </head>
 <body>
-<div id="app" onclick="triggerFocus(event)">
-    <div id="shutter-flash"></div>
-    <div id="focus-square"></div>
-    <div class="top-nav">
-        <button class="btn-ui" onclick="toggleGrid()">GRID</button>
-        <span style="font-size: 9px; letter-spacing: 5px; opacity: 0.5;">RAW SENSOR</span>
-        <button class="btn-ui" onclick="location.reload()">RESET</button>
+<div id="app">
+    <div class="viewfinder-container" onclick="triggerFocus(event)">
+        <div id="shutter-flash"></div>
+        <div id="focus-square"></div>
+        <div class="top-nav">
+            <button class="btn-ui" style="background:none; border:none; color:white;" onclick="toggleGrid()">GRID</button>
+            <span style="font-size: 9px; letter-spacing: 5px; opacity: 0.5;">PURE SENSOR</span>
+            <button class="btn-ui" style="background:none; border:none; color:white;" onclick="location.reload()">RESET</button>
+        </div>
+        <div id="grid" class="hidden"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+        <video id="v" autoplay playsinline class="f-leica"></video>
     </div>
-    <div id="grid" class="hidden"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
-    
-    <video id="v" autoplay playsinline class="f-leica"></video>
 
-    <div class="bottom-nav" onclick="event.stopPropagation()">
+    <div class="bottom-nav">
         <div class="scroller">
             <button class="f-opt active" onclick="setMode(this, 'f-leica')">L-mono</button>
             <button class="f-opt" onclick="setMode(this, 'f-fuji')">F-mono</button>
@@ -96,18 +110,12 @@
 
     async function init() {
         try {
-            // Priority: Maximum Resolution & Native Aspect Ratio
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: "environment", 
-                    width: { ideal: 4096 },  // Requests native 4K or higher
-                    height: { ideal: 3072 }, // Typical 4:3 or 3:2 sensor ratio
-                    frameRate: { ideal: 30 } 
-                } 
+                video: { facingMode: "environment", width: { ideal: 4096 }, height: { ideal: 3072 } } 
             });
             v.srcObject = stream;
             track = stream.getVideoTracks()[0];
-        } catch(e) { console.error("Native sensor access failed."); }
+        } catch(e) { console.error("Access error."); }
     }
 
     function toggleGrid() { grid.classList.toggle('hidden'); }
@@ -119,24 +127,20 @@
 
     async function triggerFocus(e) {
         if (!track) return;
+        const rect = v.getBoundingClientRect();
         focusSq.style.left = `${e.clientX}px`; focusSq.style.top = `${e.clientY}px`;
         focusSq.style.display = 'block'; setTimeout(() => focusSq.style.display = 'none', 500);
-        try { await track.applyConstraints({ advanced: [{ pointsOfInterest: [{x: e.clientX/window.innerWidth, y: e.clientY/window.innerHeight}] }] }); } catch(err) {}
+        try { await track.applyConstraints({ advanced: [{ pointsOfInterest: [{x: (e.clientX - rect.left)/rect.width, y: (e.clientY - rect.top)/rect.height}] }] }); } catch(err) {}
     }
 
     function executeSnap() {
         flash.classList.add('blink');
         const activeLabel = document.querySelector('.f-opt.active').innerText;
         setTimeout(() => {
-            // Lock canvas to native video stream resolution (exact pixels)
-            c.width = v.videoWidth; 
-            c.height = v.videoHeight;
+            c.width = v.videoWidth; c.height = v.videoHeight;
             const ctx = c.getContext('2d');
-            
-            // Diffusion & Filter
             ctx.filter = "blur(0.6px) " + window.getComputedStyle(v).filter;
             ctx.drawImage(v, 0, 0);
-
             const link = document.createElement('a');
             link.download = `${activeLabel}_${Date.now()}.jpg`;
             link.href = c.toDataURL('image/jpeg', 0.95);
