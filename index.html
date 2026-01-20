@@ -11,65 +11,45 @@
         :root { --accent: #ff6600; }
         body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: sans-serif; color: white; -webkit-user-select: none; }
         
-        /* Flexbox Layout to prevent overlap */
-        #app { 
-            display: flex;
-            flex-direction: column;
-            width: 100vw;
-            height: 100vh;
-            background: #000;
-        }
+        #app { display: flex; flex-direction: column; width: 100vw; height: 100vh; background: #000; }
 
-        /* Viewfinder Section */
-        .viewfinder-container {
-            position: relative;
-            flex-grow: 1; /* Takes all available space */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            background: #050505;
-        }
-
-        video { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: contain; /* Shows native sensor without crop */
-        }
+        .viewfinder-container { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #000; }
+        video { width: 100%; height: 100%; object-fit: contain; }
         
-        /* Filters */
+        /* Brand Profiles */
         .f-leica { filter: grayscale(100%) contrast(160%) brightness(105%); }
         .f-fuji { filter: grayscale(100%) contrast(120%) brightness(100%) sepia(5%); }
         .f-ricoh { filter: grayscale(100%) contrast(220%) brightness(90%); }
         .f-pentax { filter: grayscale(100%) contrast(110%) brightness(110%); }
 
-        /* Overlays stay inside the Viewfinder container */
-        #grid { position: absolute; inset: 0; pointer-events: none; z-index: 10; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; opacity: 0.3; }
-        #grid div { border: 0.2px solid rgba(255,255,255,0.4); }
+        /* Overlays */
+        #grid { position: absolute; inset: 0; pointer-events: none; z-index: 10; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; opacity: 0.2; }
+        #grid div { border: 0.1px solid rgba(255,255,255,0.5); }
         #grid.hidden { opacity: 0; }
         #shutter-flash { position: absolute; inset: 0; background: black; opacity: 0; pointer-events: none; z-index: 100; }
-        .blink { animation: blinkAnim 0.3s ease-out; }
-        @keyframes blinkAnim { 0% { opacity: 0; } 40% { opacity: 1; } 100% { opacity: 0; } }
-        #focus-square { position: absolute; width: 60px; height: 60px; border: 1px solid white; display: none; pointer-events: none; z-index: 40; transform: translate(-50%, -50%); opacity: 0.5; }
+        .blink { animation: blinkAnim 0.25s ease-out; }
+        @keyframes blinkAnim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+        #focus-square { position: absolute; width: 65px; height: 65px; border: 1px solid white; display: none; pointer-events: none; z-index: 40; transform: translate(-50%, -50%); opacity: 0.6; }
         
-        /* Nav Areas */
-        .top-nav { position: absolute; top: 45px; width: 100%; display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box; z-index: 70; }
+        .top-nav { position: absolute; top: 50px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; z-index: 70; }
+        .btn-ui { background: none; border: none; color: white; font-size: 13px; letter-spacing: 1.5px; opacity: 0.9; cursor: pointer; }
         
-        /* Bottom Control Panel - Now physically below the video */
-        .bottom-nav { 
-            background: #000; 
-            padding: 20px 0 50px 0; 
-            z-index: 70; 
-            text-align: center;
-            border-top: 1px solid #111;
-        }
-        
-        .scroller { display: flex; gap: 20px; overflow-x: auto; padding: 10px; scrollbar-width: none; justify-content: center; margin-bottom: 15px; }
-        .f-opt { background: none; border: none; color: #444; font-size: 11px; letter-spacing: 2px; transition: 0.2s; padding: 5px 10px; font-weight: bold;}
+        /* Bottom Control Panel */
+        .bottom-nav { background: #000; padding: 15px 0 45px 0; z-index: 70; border-top: 1px solid #1a1a1a; }
+        .scroller { display: flex; gap: 25px; overflow-x: auto; padding: 10px; scrollbar-width: none; justify-content: center; margin-bottom: 20px; }
+        .f-opt { background: none; border: none; color: #555; font-size: 11px; letter-spacing: 2px; transition: 0.2s; padding: 5px 12px; font-weight: 700; text-transform: uppercase; }
         .f-opt.active { color: var(--accent); }
         
-        .shutter-btn { width: 72px; height: 72px; border-radius: 50%; border: 3px solid white; display: inline-flex; justify-content: center; align-items: center; background: none; }
-        .shutter-core { width: 58px; height: 58px; border-radius: 50%; background: white; transition: transform 0.1s; }
+        /* Shutter & Gallery Controls */
+        .controls-row { display: flex; align-items: center; justify-content: center; gap: 40px; position: relative; }
+        
+        .shutter-btn { width: 74px; height: 74px; border-radius: 50%; border: 3px solid white; display: inline-flex; justify-content: center; align-items: center; background: none; }
+        .shutter-core { width: 60px; height: 60px; border-radius: 50%; background: white; transition: transform 0.1s; }
+        .shutter-core:active { transform: scale(0.9); }
+
+        .gallery-btn { background: none; border: none; padding: 10px; cursor: pointer; opacity: 0.8; }
+        .gallery-icon { width: 28px; height: 28px; fill: white; }
+        
         canvas { display: none; }
     </style>
 </head>
@@ -79,9 +59,9 @@
         <div id="shutter-flash"></div>
         <div id="focus-square"></div>
         <div class="top-nav">
-            <button class="btn-ui" style="background:none; border:none; color:white;" onclick="toggleGrid()">GRID</button>
-            <span style="font-size: 9px; letter-spacing: 5px; opacity: 0.5;">PURE SENSOR</span>
-            <button class="btn-ui" style="background:none; border:none; color:white;" onclick="location.reload()">RESET</button>
+            <button class="btn-ui" onclick="toggleGrid()">GRID</button>
+            <span style="font-size: 10px; letter-spacing: 4px; opacity: 0.6; font-weight: bold;">MONOCHROME</span>
+            <button class="btn-ui" onclick="location.reload()">RESET</button>
         </div>
         <div id="grid" class="hidden"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
         <video id="v" autoplay playsinline class="f-leica"></video>
@@ -94,7 +74,16 @@
             <button class="f-opt" onclick="setMode(this, 'f-ricoh')">R-mono</button>
             <button class="f-opt" onclick="setMode(this, 'f-pentax')">P-mono</button>
         </div>
-        <button class="shutter-btn" onclick="executeSnap()"><div class="shutter-core"></div></button>
+        <div class="controls-row">
+            <input type="file" id="gallery-input" accept="image/*" style="display:none">
+            <button class="gallery-btn" onclick="document.getElementById('gallery-input').click()">
+                <svg class="gallery-icon" viewBox="0 0 24 24"><path d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/></svg>
+            </button>
+            
+            <button class="shutter-btn" onclick="executeSnap()"><div class="shutter-core"></div></button>
+            
+            <div style="width:48px"></div> 
+        </div>
     </div>
 </div>
 <canvas id="c"></canvas>
@@ -115,7 +104,7 @@
             });
             v.srcObject = stream;
             track = stream.getVideoTracks()[0];
-        } catch(e) { console.error("Access error."); }
+        } catch(e) { console.error("Camera error."); }
     }
 
     function toggleGrid() { grid.classList.toggle('hidden'); }
