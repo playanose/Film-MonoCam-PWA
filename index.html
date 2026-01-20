@@ -10,10 +10,28 @@
     <style>
         :root { --accent: #ff6600; }
         body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: sans-serif; color: white; -webkit-user-select: none; }
-        #app { position: relative; width: 100vw; height: 100vh; }
-        video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Brand Filters - Clean Monochrome */
+        #app { 
+            position: relative; 
+            width: 100vw; 
+            height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            background: #050505;
+        }
+
+        /* NATIVE SENSOR VIEW: 
+           object-fit: contain ensures you see the EXACT frame the sensor sees, 
+           without any digital zooming or cropping to fit the phone screen. */
+        video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            background: #000;
+        }
+        
+        /* Filters */
         .f-leica { filter: grayscale(100%) contrast(160%) brightness(105%); }
         .f-fuji { filter: grayscale(100%) contrast(120%) brightness(100%) sepia(5%); }
         .f-ricoh { filter: grayscale(100%) contrast(220%) brightness(90%); }
@@ -31,7 +49,7 @@
         .top-nav { position: absolute; top: 45px; width: 100%; display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box; z-index: 70; }
         .btn-ui { background: none; border: none; color: white; font-size: 14px; letter-spacing: 1px; opacity: 0.8; }
         
-        .bottom-nav { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.85) 60%); padding-bottom: 60px; z-index: 70; text-align: center;}
+        .bottom-nav { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.9) 70%); padding-bottom: 60px; z-index: 70; text-align: center;}
         .scroller { display: flex; gap: 20px; overflow-x: auto; padding: 15px; scrollbar-width: none; justify-content: center; margin-bottom: 15px; }
         .f-opt { background: none; border: none; color: #666; font-size: 10px; letter-spacing: 2px; transition: 0.2s; padding: 5px 10px; font-weight: bold;}
         .f-opt.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
@@ -48,7 +66,7 @@
     <div id="focus-square"></div>
     <div class="top-nav">
         <button class="btn-ui" onclick="toggleGrid()">GRID</button>
-        <span style="font-size: 9px; letter-spacing: 5px; opacity: 0.5;">MONOCHROME</span>
+        <span style="font-size: 9px; letter-spacing: 5px; opacity: 0.5;">RAW SENSOR</span>
         <button class="btn-ui" onclick="location.reload()">RESET</button>
     </div>
     <div id="grid" class="hidden"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
@@ -78,12 +96,18 @@
 
     async function init() {
         try {
+            // Priority: Maximum Resolution & Native Aspect Ratio
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment", width: { ideal: 7680 }, height: { ideal: 4320 } } 
+                video: { 
+                    facingMode: "environment", 
+                    width: { ideal: 4096 },  // Requests native 4K or higher
+                    height: { ideal: 3072 }, // Typical 4:3 or 3:2 sensor ratio
+                    frameRate: { ideal: 30 } 
+                } 
             });
             v.srcObject = stream;
             track = stream.getVideoTracks()[0];
-        } catch(e) { console.error("Camera access required."); }
+        } catch(e) { console.error("Native sensor access failed."); }
     }
 
     function toggleGrid() { grid.classList.toggle('hidden'); }
@@ -104,10 +128,12 @@
         flash.classList.add('blink');
         const activeLabel = document.querySelector('.f-opt.active').innerText;
         setTimeout(() => {
-            c.width = v.videoWidth; c.height = v.videoHeight;
+            // Lock canvas to native video stream resolution (exact pixels)
+            c.width = v.videoWidth; 
+            c.height = v.videoHeight;
             const ctx = c.getContext('2d');
             
-            // Apply subtle Anti-Sharpening diffusion (0.6px)
+            // Diffusion & Filter
             ctx.filter = "blur(0.6px) " + window.getComputedStyle(v).filter;
             ctx.drawImage(v, 0, 0);
 
